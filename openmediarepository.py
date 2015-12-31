@@ -1,6 +1,17 @@
 """OpenMediaRepository - a web based open media repository framework.
 
    Copyright (c) 2015 Florian Berger <florian.berger@posteo.de>
+
+
+   ## Basic Data Structures
+
+   The basic data structures are the Repository and the Accounts.
+
+   >>> import openmediarepository as omr
+   >>> r = omr.Repository()
+   >>> a = omr.Accounts()
+   >>>
+
 """
 
 # This file is part of OpenMediaRepository.
@@ -35,6 +46,18 @@ LOGGER.addHandler(STDERR_HANDLER)
 PORT = 8000
 THREADS = 10
 AUTORELOAD = False
+
+class Repository:
+    """Represent media items, and provide access.
+    """
+
+    pass
+
+class Accounts:
+    """Represent accounts, and provide access.
+    """
+
+    pass
 
 class WebApp:
     """Web application main class, suitable as cherrypy root.

@@ -5,6 +5,7 @@ help:
 	@echo '    sdist'
 	@echo '    docs'
 	@echo '    exe'
+	@echo '    doctest'
 	@echo '    user_install'
 	@echo '    pypi'
 	@echo '    README.rst'
@@ -36,6 +37,9 @@ exe: sdist
 	rm -rf build/exe.*
 	$(PYTHON) setup.py build
 
+doctest:
+	$(PYTHON) -m doctest openmediarepository.py
+
 user_install:
 	$(PYTHON) setup.py install --user --record user_install-filelist.txt
 
@@ -48,6 +52,9 @@ sdist:
 	@echo Please supply Python executable as PYTHON=executable.
 
 exe:
+	@echo Please supply Python executable as PYTHON=executable.
+
+doctest:
 	@echo Please supply Python executable as PYTHON=executable.
 
 user_install:
