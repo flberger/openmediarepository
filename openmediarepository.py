@@ -13,7 +13,7 @@
    >>>
 
 
-   ## Repository Items
+   ## Items
 
    Media repository items are key-value storages with a mandatory set
    of keys. They can either be represented by a dict or by an object
@@ -36,6 +36,19 @@
    >>> import io
    >>> test_item_3 = omr.Item(io.BytesIO(bytes("<svg><!-- Test 3 --></svg>", encoding = "utf8")))
 
+
+   ## Repository API
+
+   >>> r.add(test_item_1)
+   >>> r.add(test_item_2)
+   >>> r.add(test_item_3)
+
+   Invalid items will be rejected.
+
+   >>> r.add({"not" : "valid"})
+   Traceback (most recent call last):
+   ...
+   RuntimeError: Can not add invalid item to repository: '{'not': 'valid'}'
 """
 
 # This file is part of OpenMediaRepository.
@@ -88,9 +101,43 @@ class Item:
         
 class Repository:
     """Represent media items, and provide access.
+
+       Attributes:
+
+       Repository.items
+           A dict, mapping Whirlpool hex digest strings to Item instances
+           or an equivalent dict.
     """
 
-    pass
+    def __init__(self):
+        """Initialise.
+        """
+
+        self.items = {}
+
+        return
+
+    def add(self, item):
+        """Add an item to the repository.
+           item is either a dictionary or returns fitting values
+           on __getattr__() calls.
+        """
+
+        try:
+            self.items[item["identifier"]] = item
+            
+        except:
+
+            # May be TypeError, KeyError, ...
+            
+            try:
+                self.items[item.identifier] = item
+                
+            except AttributeError:
+                
+                raise RuntimeError("Can not add invalid item to repository: '{0}'".format(repr(item)))
+
+        return
 
 class Accounts:
     """Represent accounts, and provide access.
