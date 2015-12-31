@@ -49,6 +49,16 @@
    Traceback (most recent call last):
    ...
    RuntimeError: Can not add invalid item to repository: '{'not': 'valid'}'
+
+   Repository.items allows for listing and enumerating items.
+
+   >>> l = list(r.items.keys())
+   >>> l.sort()
+
+   Let's display the identifiers shortened, for reading convenience.
+
+   >>> [identifier[:8] for identifier in l]
+   ['6f847d12', '9d71ca42', 'aac73176']
 """
 
 # This file is part of OpenMediaRepository.
