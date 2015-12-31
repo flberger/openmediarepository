@@ -28,11 +28,11 @@ Documentation
 To read the API documentation, open a shell / DOS window, navigate to the
 OpenMediaRepository directory, and run
 
-    pydoc OpenMediaRepository
+    pydoc openmediarepository
 
 You can create a HTML version using
 
-    pydoc -w OpenMediaRepository
+    pydoc -w openmediarepository
 
 
 License

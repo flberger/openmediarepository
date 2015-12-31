@@ -15,10 +15,10 @@ help:
 	@echo '    commit'
 
 check:
-	pylint OpenMediaRepository
+	pylint openmediarepository
 
 errors:
-	pylint --errors-only OpenMediaRepository
+	pylint --errors-only openmediarepository
 
 ifdef PYTHON
 
@@ -28,7 +28,7 @@ sdist:
 
 docs: clean
 	pydoctor --verbose \
-	         --add-package OpenMediaRepository \
+	         --add-package openmediarepository \
 	         --make-html \
 	         --html-output doc/
 
@@ -75,6 +75,7 @@ clean:
 	@echo About to remove all log files. RETURN to proceed && read DUMMY && rm -vf `find . -iname '*.log'`
 	rm -rvf `find . -type d -iname '__pycache__'`
 	rm -vf `find . -iname '*.pyc'`
+	rm -vf `find . -iname '*~'`
 
 commit.txt:
 	hg diff > commit.txt

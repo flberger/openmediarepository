@@ -21,15 +21,15 @@
 # Work started on 31. Dec 2015.
 
 import os.path
-import OpenMediaRepository
+import openmediarepository
 
-PACKAGE = "OpenMediaRepository"
+PACKAGE = "openmediarepository"
 
 # Fallback
 #
 from distutils.core import setup
 
-SCRIPTS = ["OpenMediaRepository.py"]
+SCRIPTS = ["openmediarepository.py"]
 
 EXECUTABLES = []
 
@@ -93,10 +93,10 @@ for path in INCLUDE_FILES:
 # The syntax for the "include_files" option to "build_exe" is [(src, target), ...]
 #
 setup(name = PACKAGE,
-      version = OpenMediaRepository.VERSION,
+      version = openmediarepository.VERSION,
       author = "Florian Berger",
       author_email = "florian.berger@posteo.de",
-      url = "http://florian-berger.de/en/software/OpenMediaRepository",
+      url = "http://florian-berger.de/en/software/openmediarepository",
       description = PACKAGE + " - DESCRIPTION HERE",
       long_description = LONG_DESCRIPTION,
       license = "GPL",
