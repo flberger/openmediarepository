@@ -59,6 +59,31 @@
 
    >>> [identifier[:8] for identifier in l]
    ['6f847d12', '9d71ca42', 'aac73176']
+
+
+   ## Accounts API
+
+   Accounts are represented by an email address.
+
+   >>> a.add("alice@some.domain")
+   >>> a.add('"Bob" <bob@some.domain>')
+   >>> a.add('Eve <eve@some.domain>')
+
+   The email address serves as an unique identifier.
+   Duplicates will be rejected.
+
+   >>> a.add("bob@some.domain")
+   Traceback (most recent call last):
+   ...
+   ValueError: Address already exists: 'bob@some.domain'
+
+   Adresses and possible names are available in the Accounts.accounts
+   dict.
+
+   >>> emails = list(a.accounts.keys())
+   >>> emails.sort()
+   >>> ["<{0}>: '{1}'".format(email, a.accounts[email]) for email in emails]
+   ["<alice@some.domain>: ''", "<bob@some.domain>: 'Bob'", "<eve@some.domain>: 'Eve'"]
 """
 
 # This file is part of OpenMediaRepository.
@@ -151,9 +176,50 @@ class Repository:
 
 class Accounts:
     """Represent accounts, and provide access.
+
+       Attributes:
+
+       Accounts.accounts
+           A dict, mapping email addresses to strings with names,
+           or empty strings if no name is given.
     """
 
-    pass
+    def __init__(self):
+        """Initialise.
+        """
+
+        self.accounts = {}
+
+        return
+
+    def add(self, email):
+        """Add the email address as an account.
+           email can be a plain email address, or a string '"Firstname Lastname" <email@address>'.
+        """
+
+        email = email.strip()
+
+        # Default: treating as plain email address
+
+        email_part = email
+
+        name_part = ""
+
+        if email.find("<") > -1:
+
+            name_part, email_part = email.split(sep = "<", maxsplit = 1)
+
+            email_part = email_part.strip(">")
+
+            name_part = name_part.strip().strip('"')
+
+        if email_part in self.accounts.keys():
+
+            raise ValueError("Address already exists: '{0}'".format(email_part))
+
+        self.accounts[email_part] = name_part
+
+        return
 
 class WebApp:
     """Web application main class, suitable as cherrypy root.
