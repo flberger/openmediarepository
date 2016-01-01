@@ -84,6 +84,18 @@
    >>> emails.sort()
    >>> ["<{0}>: '{1}'".format(email, a.accounts[email]) for email in emails]
    ["<alice@some.domain>: ''", "<bob@some.domain>: 'Bob'", "<eve@some.domain>: 'Eve'"]
+
+   Accounts can be dumped for later reconstruction.
+
+   >>> a.dump()
+   >>> a = omr.Accounts()
+   >>> list(a.accounts.keys())
+   []
+   >>> a.load()
+   >>> emails = list(a.accounts.keys())
+   >>> emails.sort()
+   >>> ["<{0}>: '{1}'".format(email, a.accounts[email]) for email in emails]
+   ["<alice@some.domain>: ''", "<bob@some.domain>: 'Bob'", "<eve@some.domain>: 'Eve'"]
 """
 
 # This file is part of OpenMediaRepository.
@@ -218,6 +230,33 @@ class Accounts:
             raise ValueError("Address already exists: '{0}'".format(email_part))
 
         self.accounts[email_part] = name_part
+
+        return
+
+    def dump(self):
+        """Serialise current data to storage.
+           The default implementation writes the data to a plain text file in CWD.
+        """
+
+        with open("accounts.txt", "wt", encoding = "utf8") as fp:
+
+            for email_part in self.accounts.keys():
+
+                fp.write('"{0}" <{1}>\n'.format(self.accounts[email_part], email_part))
+
+        return
+
+    def load(self):
+        """Read account data from storage.
+           The default implementation reads the data from a plain text file in CWD,
+           using Accounts.add() for parsing.
+        """
+
+        with open("accounts.txt", "rt", encoding = "utf8") as fp:
+
+            for line in fp.readlines():
+
+                self.add(line)
 
         return
 
