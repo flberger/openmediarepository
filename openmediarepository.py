@@ -13,6 +13,43 @@
    >>>
 
 
+   ## Accounts API
+
+   Accounts are represented by an email address.
+
+   >>> a.add("alice@some.domain")
+   >>> a.add('"Bob" <bob@some.domain>')
+   >>> a.add('Eve <eve@some.domain>')
+
+   The email address serves as an unique identifier.
+   Duplicates will be rejected.
+
+   >>> a.add("bob@some.domain")
+   Traceback (most recent call last):
+   ...
+   ValueError: Address already exists: 'bob@some.domain'
+
+   Adresses and possible names are available in the Accounts.accounts
+   dict.
+
+   >>> emails = list(a.accounts.keys())
+   >>> emails.sort()
+   >>> ["<{0}>: '{1}'".format(email, a.accounts[email]) for email in emails]
+   ["<alice@some.domain>: ''", "<bob@some.domain>: 'Bob'", "<eve@some.domain>: 'Eve'"]
+
+   Accounts can be dumped for later reconstruction.
+
+   >>> a.dump()
+   >>> a = omr.Accounts()
+   >>> list(a.accounts.keys())
+   []
+   >>> a.load()
+   >>> emails = list(a.accounts.keys())
+   >>> emails.sort()
+   >>> ["<{0}>: '{1}'".format(email, a.accounts[email]) for email in emails]
+   ["<alice@some.domain>: ''", "<bob@some.domain>: 'Bob'", "<eve@some.domain>: 'Eve'"]
+
+
    ## Items
 
    Media repository items are key-value storages with a mandatory set
@@ -28,6 +65,7 @@
    >>> import hashlib
    >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 1 --></svg>", encoding = "utf8"))
    >>> test_item_1 = {"identifier" : hash.hexdigest()}
+   >>> test_item_1["creator"] = emails[0]
    >>> test_item_1["title"] = "Test 1 SVG image"
 
    >>> class TestItem:
@@ -35,12 +73,13 @@
    >>> test_item_2 = TestItem()
    >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 2 --></svg>", encoding = "utf8"))
    >>> test_item_2.identifier = hash.hexdigest()
+   >>> test_item_2.creator = emails[1]
    >>> test_item_2.format = "image/svg"
 
    For convenience, there is an item class.
 
    >>> import io
-   >>> test_item_3 = omr.Item(io.BytesIO(bytes("<svg><!-- Test 3 --></svg>", encoding = "utf8")), description = "Test 3 SVG image.")
+   >>> test_item_3 = omr.Item(io.BytesIO(bytes("<svg><!-- Test 3 --></svg>", encoding = "utf8")), creator = emails[2], description = "Test 3 SVG image.")
 
    Access to mandatory properties of an Item which are not defined
    will return an empty string.
@@ -103,7 +142,7 @@
    ...                     value = ""
    ...         print("    {0}: {1}".format(attribute, value[:32]))
    6f847d12
-       creator: 
+       creator: bob@some.domain
        date: 
        description: 
        format: image/svg
@@ -111,7 +150,7 @@
        rights: 
        title: 
    9d71ca42
-       creator: 
+       creator: alice@some.domain
        date: 
        description: 
        format: 
@@ -119,7 +158,7 @@
        rights: 
        title: Test 1 SVG image
    aac73176
-       creator: 
+       creator: eve@some.domain
        date: 
        description: Test 3 SVG image.
        format: 
@@ -154,7 +193,7 @@
    ...                     value = ""
    ...         print("    {0}: {1}".format(attribute, value[:32]))
    6f847d12
-       creator: 
+       creator: bob@some.domain
        date: 
        description: 
        format: image/svg
@@ -162,7 +201,7 @@
        rights: 
        title: 
    9d71ca42
-       creator: 
+       creator: alice@some.domain
        date: 
        description: 
        format: 
@@ -170,50 +209,13 @@
        rights: 
        title: Test 1 SVG image
    aac73176
-       creator: 
+       creator: eve@some.domain
        date: 
        description: Test 3 SVG image.
        format: 
        identifier: aac73176dd0aa26ecfad7e7263c60572
        rights: 
        title: 
-
-
-   ## Accounts API
-
-   Accounts are represented by an email address.
-
-   >>> a.add("alice@some.domain")
-   >>> a.add('"Bob" <bob@some.domain>')
-   >>> a.add('Eve <eve@some.domain>')
-
-   The email address serves as an unique identifier.
-   Duplicates will be rejected.
-
-   >>> a.add("bob@some.domain")
-   Traceback (most recent call last):
-   ...
-   ValueError: Address already exists: 'bob@some.domain'
-
-   Adresses and possible names are available in the Accounts.accounts
-   dict.
-
-   >>> emails = list(a.accounts.keys())
-   >>> emails.sort()
-   >>> ["<{0}>: '{1}'".format(email, a.accounts[email]) for email in emails]
-   ["<alice@some.domain>: ''", "<bob@some.domain>: 'Bob'", "<eve@some.domain>: 'Eve'"]
-
-   Accounts can be dumped for later reconstruction.
-
-   >>> a.dump()
-   >>> a = omr.Accounts()
-   >>> list(a.accounts.keys())
-   []
-   >>> a.load()
-   >>> emails = list(a.accounts.keys())
-   >>> emails.sort()
-   >>> ["<{0}>: '{1}'".format(email, a.accounts[email]) for email in emails]
-   ["<alice@some.domain>: ''", "<bob@some.domain>: 'Bob'", "<eve@some.domain>: 'Eve'"]
 """
 
 # This file is part of OpenMediaRepository.
