@@ -6,3 +6,5 @@ dist/
 MANIFEST*
 *~
 TODO
+accounts.txt
+repository.json
