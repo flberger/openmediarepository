@@ -22,19 +22,38 @@
    The identifier of an item is the hex digest of the Whirlpool hash
    of its content.
 
+   Items may posess additional attributes, as defined in the Dublin
+   Core Metadata standard.
+
    >>> import hashlib
    >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 1 --></svg>", encoding = "utf8"))
    >>> test_item_1 = {"identifier" : hash.hexdigest()}
+   >>> test_item_1["title"] = "Test 1 SVG image"
+
    >>> class TestItem:
    ...     pass
    >>> test_item_2 = TestItem()
    >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 2 --></svg>", encoding = "utf8"))
    >>> test_item_2.identifier = hash.hexdigest()
+   >>> test_item_2.format = "image/svg"
 
    For convenience, there is an item class.
 
    >>> import io
-   >>> test_item_3 = omr.Item(io.BytesIO(bytes("<svg><!-- Test 3 --></svg>", encoding = "utf8")))
+   >>> test_item_3 = omr.Item(io.BytesIO(bytes("<svg><!-- Test 3 --></svg>", encoding = "utf8")), description = "Test 3 SVG image.")
+
+   Access to mandatory properties of an Item which are not defined
+   will return an empty string.
+
+   >>> test_item_3.date
+   ''
+
+   Arbitrary attributes will not.
+
+   >>> test_item_3.arbitrary
+   Traceback (most recent call last):
+   ...
+   AttributeError: 'Item' object has no attribute 'arbitrary'
 
 
    ## Repository API
@@ -52,13 +71,112 @@
 
    Repository.items allows for listing and enumerating items.
 
-   >>> l = list(r.items.keys())
-   >>> l.sort()
+   >>> identifiers = list(r.items.keys())
+   >>> identifiers.sort()
 
    Let's display the identifiers shortened, for reading convenience.
 
-   >>> [identifier[:8] for identifier in l]
+   >>> [identifier[:8] for identifier in identifiers]
    ['6f847d12', '9d71ca42', 'aac73176']
+
+   The repository can be dumped for later reconstruction.
+
+   >>> attributes = list(omr.DUBLIN_CORE_PROPERTIES.keys())
+   >>> attributes.sort()
+   >>> for identifier in identifiers:
+   ...     print(identifier[:8])
+   ...     for attribute in attributes:
+   ...         value = None
+   ...         try:
+   ...             value = r.items[identifier][attribute]
+   ...         except KeyError:
+   ...             # It's a dict, but the key is missing
+   ...             value = ""
+   ...         except:
+   ...             try:
+   ...                 value = r.items[identifier].__getattr__(attribute)
+   ...             except:
+   ...                 try:
+   ...                     value = r.items[identifier].__dict__[attribute]
+   ...                 except:
+   ...                     # Giving up
+   ...                     value = ""
+   ...         print("    {0}: {1}".format(attribute, value[:32]))
+   6f847d12
+       creator: 
+       date: 
+       description: 
+       format: image/svg
+       identifier: 6f847d125a850a71cb1aed36ee680be6
+       rights: 
+       title: 
+   9d71ca42
+       creator: 
+       date: 
+       description: 
+       format: 
+       identifier: 9d71ca42166e88aa759331b6b82de5b1
+       rights: 
+       title: Test 1 SVG image
+   aac73176
+       creator: 
+       date: 
+       description: Test 3 SVG image.
+       format: 
+       identifier: aac73176dd0aa26ecfad7e7263c60572
+       rights: 
+       title: 
+   >>> r.dump()
+   >>> r = omr.Repository()
+   >>> r.items
+   {}
+   >>> r.load()
+   >>> # And repeat. Caution: copy-paste ahead.
+   >>> identifiers = list(r.items.keys())
+   >>> identifiers.sort()
+   >>> for identifier in identifiers:
+   ...     print(identifier[:8])
+   ...     for attribute in attributes:
+   ...         value = None
+   ...         try:
+   ...             value = r.items[identifier][attribute]
+   ...         except KeyError:
+   ...             # It's a dict, but the key is missing
+   ...             value = ""
+   ...         except:
+   ...             try:
+   ...                 value = r.items[identifier].__getattr__(attribute)
+   ...             except:
+   ...                 try:
+   ...                     value = r.items[identifier].__dict__[attribute]
+   ...                 except:
+   ...                     # Giving up
+   ...                     value = ""
+   ...         print("    {0}: {1}".format(attribute, value[:32]))
+   6f847d12
+       creator: 
+       date: 
+       description: 
+       format: image/svg
+       identifier: 6f847d125a850a71cb1aed36ee680be6
+       rights: 
+       title: 
+   9d71ca42
+       creator: 
+       date: 
+       description: 
+       format: 
+       identifier: 9d71ca42166e88aa759331b6b82de5b1
+       rights: 
+       title: Test 1 SVG image
+   aac73176
+       creator: 
+       date: 
+       description: Test 3 SVG image.
+       format: 
+       identifier: aac73176dd0aa26ecfad7e7263c60572
+       rights: 
+       title: 
 
 
    ## Accounts API
@@ -117,6 +235,7 @@
 
 import logging
 import hashlib
+import json
 import cherrypy
 
 VERSION = "0.1.0"
@@ -132,19 +251,75 @@ PORT = 8000
 THREADS = 10
 AUTORELOAD = False
 
+# http://www.dublincore.org/documents/dcmi-terms/#H3
+#
+DUBLIN_CORE_PROPERTIES = {"creator": "An entity primarily responsible for making the resource.",
+    "date": "A point or period of time associated with an event in the lifecycle of the resource.",
+    "description": "An account of the resource.",
+    "format": "The file format, physical medium, or dimensions of the resource.",
+    "identifier": "An unambiguous reference to the resource within a given context.",
+    "rights": "Information about rights held in and over the resource.",
+    "title": "A name given to the resource."}
+
 class Item:
     """Convenience class, representing a repository item.
+
+       Item instances may posess these attributes, as defined in the
+       Dublin Core Metadata standard:
+
+       Item.creator
+           An entity primarily responsible for making the resource.
+
+       Item.date
+           A point or period of time associated with an event in the lifecycle of the resource.
+    
+       Item.description
+           An account of the resource.
+    
+       Item.format
+           The file format, physical medium, or dimensions of the resource.
+    
+       Item.identifier
+           An unambiguous reference to the resource within a given context.
+    
+       Item.rights
+           Information about rights held in and over the resource.
+    
+       Item.title
+           A name given to the resource.
     """
 
-    def __init__(self, fp):
+    def __init__(self, fp, **kwargs):
         """Initialise.
            fp is a binary mode filepointer pointing to the media file
            to be represented.
+           The constructor can be called with all keyword arguments
+           present as keys in DUBLIN_CORE_PROPERTIES.keys().
         """
 
         self.identifier = hashlib.new("whirlpool", fp.read()).hexdigest()
 
+        for key in kwargs.keys():
+
+            if key in DUBLIN_CORE_PROPERTIES.keys():
+
+                self.__dict__[key] = kwargs[key]
+
         return
+
+    def __getattr__(self, name):
+        """Make sure access to undefined valid metadata attributes returns an empty string.
+        """
+
+        if name not in DUBLIN_CORE_PROPERTIES.keys():
+
+            raise AttributeError("'Item' object has no attribute '{0}'".format(name))
+
+        try:
+            return self.__dict__[name]
+            
+        except:
+            return ""
         
 class Repository:
     """Represent media items, and provide access.
@@ -183,6 +358,63 @@ class Repository:
             except AttributeError:
                 
                 raise RuntimeError("Can not add invalid item to repository: '{0}'".format(repr(item)))
+
+        return
+
+    def dump(self):
+        """Serialise current repository to storage.
+           The default implementation writes the data to a JSON file in CWD.
+        """
+
+        # Make sure we only use dicts
+
+        dict_to_serialise = {}
+
+        for identifier in self.items.keys():
+
+            dict_to_serialise[identifier] = {}
+
+            for attribute in DUBLIN_CORE_PROPERTIES.keys():
+
+                value = None
+                
+                try:
+                    value = self.items[identifier][attribute]
+                    
+                except KeyError:
+                    # It's a dict, but the key is missing
+                    value = ""
+                    
+                except:
+                    
+                    try:
+                        value = self.items[identifier].__getattr__(attribute)
+                        
+                    except:
+                        
+                        try:
+                            value = self.items[identifier].__dict__[attribute]
+                            
+                        except:
+                            # Giving up
+                            value = ""
+
+                dict_to_serialise[identifier][attribute] = value
+
+        with open("repository.json", "wt", encoding = "utf8") as fp:
+
+            fp.write(json.dumps(dict_to_serialise, sort_keys = True, indent = 4) + "\n")
+
+        return
+
+    def load(self):
+        """Read repository data from storage.
+           The default implementation reads the data from a JSON file in CWD.
+        """
+
+        with open("repository.json", "rt", encoding = "utf8") as fp:
+
+            self.items = json.loads(fp.read())
 
         return
 
