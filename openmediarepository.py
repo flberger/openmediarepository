@@ -63,7 +63,7 @@
    Core Metadata standard.
 
    >>> import hashlib
-   >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 1 --></svg>", encoding = "utf8"))
+   >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 1 --></svg>", encoding="utf8"))
    >>> test_item_1 = {"identifier" : hash.hexdigest()}
    >>> test_item_1["creator"] = emails[0]
    >>> test_item_1["title"] = "Test 1 SVG image"
@@ -71,7 +71,7 @@
    >>> class TestItem:
    ...     pass
    >>> test_item_2 = TestItem()
-   >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 2 --></svg>", encoding = "utf8"))
+   >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 2 --></svg>", encoding="utf8"))
    >>> test_item_2.identifier = hash.hexdigest()
    >>> test_item_2.creator = emails[1]
    >>> test_item_2.format = "image/svg"
@@ -79,7 +79,7 @@
    For convenience, there is an item class.
 
    >>> import io
-   >>> test_item_3 = omr.Item(io.BytesIO(bytes("<svg><!-- Test 3 --></svg>", encoding = "utf8")), creator = emails[2], description = "Test 3 SVG image.")
+   >>> test_item_3 = omr.Item(io.BytesIO(bytes("<svg><!-- Test 3 --></svg>", encoding="utf8")), creator=emails[2], description="Test 3 SVG image.")
 
    Access to mandatory properties of an Item which are not defined
    will return an empty string.
@@ -120,102 +120,88 @@
 
    The repository can be dumped for later reconstruction.
 
-   >>> attributes = list(omr.DUBLIN_CORE_PROPERTIES.keys())
-   >>> attributes.sort()
-   >>> for identifier in identifiers:
-   ...     print(identifier[:8])
-   ...     for attribute in attributes:
-   ...         value = None
-   ...         try:
-   ...             value = r.items[identifier][attribute]
-   ...         except KeyError:
-   ...             # It's a dict, but the key is missing
-   ...             value = ""
-   ...         except:
+   >>> def print_items(identifiers):
+   ...     attributes = list(omr.DUBLIN_CORE_PROPERTIES.keys())
+   ...     attributes.sort()
+   ...     for identifier in identifiers:
+   ...         print(identifier[:8])
+   ...         for attribute in attributes:
+   ...             value = None
    ...             try:
-   ...                 value = r.items[identifier].__getattr__(attribute)
+   ...                 value = r.items[identifier][attribute]
+   ...             except KeyError:
+   ...                 # It's a dict, but the key is missing
+   ...                 value = ""
    ...             except:
    ...                 try:
-   ...                     value = r.items[identifier].__dict__[attribute]
+   ...                     value = r.items[identifier].__getattr__(attribute)
    ...                 except:
-   ...                     # Giving up
-   ...                     value = ""
-   ...         print("    {0}: {1}".format(attribute, value[:32]))
+   ...                     try:
+   ...                         value = r.items[identifier].__dict__[attribute]
+   ...                     except:
+   ...                         # Giving up
+   ...                         value = ""
+   ...             if value != "":
+   ...                 value = " " + value[:32]
+   ...             print("    {0}:{1}".format(attribute, value))
+   ...     return
+   >>> print_items(identifiers)
    6f847d12
        creator: bob@some.domain
-       date: 
-       description: 
+       date:
+       description:
        format: image/svg
        identifier: 6f847d125a850a71cb1aed36ee680be6
-       rights: 
-       title: 
+       rights:
+       title:
    9d71ca42
        creator: alice@some.domain
-       date: 
-       description: 
-       format: 
+       date:
+       description:
+       format:
        identifier: 9d71ca42166e88aa759331b6b82de5b1
-       rights: 
+       rights:
        title: Test 1 SVG image
    aac73176
        creator: eve@some.domain
-       date: 
+       date:
        description: Test 3 SVG image.
-       format: 
+       format:
        identifier: aac73176dd0aa26ecfad7e7263c60572
-       rights: 
-       title: 
+       rights:
+       title:
    >>> r.dump()
    >>> r = omr.Repository()
    >>> r.items
    {}
    >>> r.load()
-   >>> # And repeat. Caution: copy-paste ahead.
    >>> identifiers = list(r.items.keys())
    >>> identifiers.sort()
-   >>> for identifier in identifiers:
-   ...     print(identifier[:8])
-   ...     for attribute in attributes:
-   ...         value = None
-   ...         try:
-   ...             value = r.items[identifier][attribute]
-   ...         except KeyError:
-   ...             # It's a dict, but the key is missing
-   ...             value = ""
-   ...         except:
-   ...             try:
-   ...                 value = r.items[identifier].__getattr__(attribute)
-   ...             except:
-   ...                 try:
-   ...                     value = r.items[identifier].__dict__[attribute]
-   ...                 except:
-   ...                     # Giving up
-   ...                     value = ""
-   ...         print("    {0}: {1}".format(attribute, value[:32]))
+   >>> print_items(identifiers)
    6f847d12
        creator: bob@some.domain
-       date: 
-       description: 
+       date:
+       description:
        format: image/svg
        identifier: 6f847d125a850a71cb1aed36ee680be6
-       rights: 
-       title: 
+       rights:
+       title:
    9d71ca42
        creator: alice@some.domain
-       date: 
-       description: 
-       format: 
+       date:
+       description:
+       format:
        identifier: 9d71ca42166e88aa759331b6b82de5b1
-       rights: 
+       rights:
        title: Test 1 SVG image
    aac73176
        creator: eve@some.domain
-       date: 
+       date:
        description: Test 3 SVG image.
-       format: 
+       format:
        identifier: aac73176dd0aa26ecfad7e7263c60572
-       rights: 
-       title: 
+       rights:
+       title:
 """
 
 # This file is part of OpenMediaRepository.
@@ -244,7 +230,7 @@ VERSION = "0.1.0"
 
 LOGGER = logging.getLogger("OpenMediaRepository")
 LOGGER.setLevel(logging.DEBUG)
-STDERR_FORMATTER = logging.Formatter("OpenMediaRepository [{levelname}] {funcName}(): {message} (l.{lineno})", style = "{")
+STDERR_FORMATTER = logging.Formatter("OpenMediaRepository [{levelname}] {funcName}(): {message} (l.{lineno})", style="{")
 STDERR_HANDLER = logging.StreamHandler()
 STDERR_HANDLER.setFormatter(STDERR_FORMATTER)
 LOGGER.addHandler(STDERR_HANDLER)
@@ -255,7 +241,8 @@ AUTORELOAD = False
 
 # http://www.dublincore.org/documents/dcmi-terms/#H3
 #
-DUBLIN_CORE_PROPERTIES = {"creator": "An entity primarily responsible for making the resource.",
+DUBLIN_CORE_PROPERTIES = {
+    "creator": "An entity primarily responsible for making the resource.",
     "date": "A point or period of time associated with an event in the lifecycle of the resource.",
     "description": "An account of the resource.",
     "format": "The file format, physical medium, or dimensions of the resource.",
@@ -274,19 +261,19 @@ class Item:
 
        Item.date
            A point or period of time associated with an event in the lifecycle of the resource.
-    
+
        Item.description
            An account of the resource.
-    
+
        Item.format
            The file format, physical medium, or dimensions of the resource.
-    
+
        Item.identifier
            An unambiguous reference to the resource within a given context.
-    
+
        Item.rights
            Information about rights held in and over the resource.
-    
+
        Item.title
            A name given to the resource.
     """
@@ -319,10 +306,10 @@ class Item:
 
         try:
             return self.__dict__[name]
-            
+
         except:
             return ""
-        
+
 class Repository:
     """Represent media items, and provide access.
 
@@ -349,16 +336,16 @@ class Repository:
 
         try:
             self.items[item["identifier"]] = item
-            
+
         except:
 
             # May be TypeError, KeyError, ...
-            
+
             try:
                 self.items[item.identifier] = item
-                
+
             except AttributeError:
-                
+
                 raise RuntimeError("Can not add invalid item to repository: '{0}'".format(repr(item)))
 
         return
@@ -379,33 +366,33 @@ class Repository:
             for attribute in DUBLIN_CORE_PROPERTIES.keys():
 
                 value = None
-                
+
                 try:
                     value = self.items[identifier][attribute]
-                    
+
                 except KeyError:
                     # It's a dict, but the key is missing
                     value = ""
-                    
+
                 except:
-                    
+
                     try:
                         value = self.items[identifier].__getattr__(attribute)
-                        
+
                     except:
-                        
+
                         try:
                             value = self.items[identifier].__dict__[attribute]
-                            
+
                         except:
                             # Giving up
                             value = ""
 
                 dict_to_serialise[identifier][attribute] = value
 
-        with open("repository.json", "wt", encoding = "utf8") as fp:
+        with open("repository.json", "wt", encoding="utf8") as fp:
 
-            fp.write(json.dumps(dict_to_serialise, sort_keys = True, indent = 4) + "\n")
+            fp.write(json.dumps(dict_to_serialise, sort_keys=True, indent=4) + "\n")
 
         return
 
@@ -414,7 +401,7 @@ class Repository:
            The default implementation reads the data from a JSON file in CWD.
         """
 
-        with open("repository.json", "rt", encoding = "utf8") as fp:
+        with open("repository.json", "rt", encoding="utf8") as fp:
 
             self.items = json.loads(fp.read())
 
@@ -453,7 +440,7 @@ class Accounts:
 
         if email.find("<") > -1:
 
-            name_part, email_part = email.split(sep = "<", maxsplit = 1)
+            name_part, email_part = email.split(sep="<", maxsplit=1)
 
             email_part = email_part.strip(">")
 
@@ -472,7 +459,7 @@ class Accounts:
            The default implementation writes the data to a plain text file in CWD.
         """
 
-        with open("accounts.txt", "wt", encoding = "utf8") as fp:
+        with open("accounts.txt", "wt", encoding="utf8") as fp:
 
             for email_part in self.accounts.keys():
 
@@ -486,7 +473,7 @@ class Accounts:
            using Accounts.add() for parsing.
         """
 
-        with open("accounts.txt", "rt", encoding = "utf8") as fp:
+        with open("accounts.txt", "rt", encoding="utf8") as fp:
 
             for line in fp.readlines():
 
@@ -538,7 +525,7 @@ def main():
 
         cherrypy.engine.autoreload.unsubscribe()
 
-    cherrypy.quickstart(root, config = config_dict)
+    cherrypy.quickstart(root, config=config_dict)
 
     return
 
