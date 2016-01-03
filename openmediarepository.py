@@ -489,6 +489,19 @@ class WebApp:
         """Initialise WebApp.
         """
 
+        self.index = "index.html not found in current working directory."
+
+        try:
+            with open("index.html", "rt", encoding="utf8") as fp:
+
+                self.index = fp.read()
+
+        except FileNotFoundError:
+
+            # Default already set
+
+            pass
+
         # Make self.__call__ visible to cherrypy
         #
         self.exposed = True
@@ -497,9 +510,10 @@ class WebApp:
 
     def __call__(self):
         """Called by cherrypy for the / root page.
+           Returns 'index.html' from CWD.
         """
 
-        return '<html><head><title>Hello World</title></head><body><h1>Hello World</h1><p><a href="/subpage">Go to subpage</a></p></body></html>'
+        return self.index
 
     def subpage(self):
 
