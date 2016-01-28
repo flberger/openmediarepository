@@ -7,47 +7,47 @@
 
    The basic data structures are the Repository and the Accounts.
 
-   >>> import openmediarepository as omr
-   >>> r = omr.Repository()
-   >>> a = omr.Accounts()
-   >>>
+       >>> import openmediarepository as omr
+       >>> repository= omr.Repository()
+       >>> accounts = omr.Accounts()
+       >>>
 
 
    ## Accounts API
 
    Accounts are represented by an email address.
 
-   >>> a.add("alice@some.domain")
-   >>> a.add('"Bob" <bob@some.domain>')
-   >>> a.add('Eve <eve@some.domain>')
+       >>> accounts.add("alice@some.domain")
+       >>> accounts.add('"Bob" <bob@some.domain>')
+       >>> accounts.add('Eve <eve@some.domain>')
 
    The email address serves as an unique identifier.
    Duplicates will be rejected.
 
-   >>> a.add("bob@some.domain")
-   Traceback (most recent call last):
-   ...
-   ValueError: Address already exists: 'bob@some.domain'
+       >>> accounts.add("bob@some.domain")
+       Traceback (most recent call last):
+       ...
+       ValueError: Address already exists: 'bob@some.domain'
 
    Adresses and possible names are available in the Accounts.accounts
    dict.
 
-   >>> emails = list(a.accounts.keys())
-   >>> emails.sort()
-   >>> ["<{0}>: '{1}'".format(email, a.accounts[email]) for email in emails]
-   ["<alice@some.domain>: ''", "<bob@some.domain>: 'Bob'", "<eve@some.domain>: 'Eve'"]
+       >>> emails = list(accounts.accounts.keys())
+       >>> emails.sort()
+       >>> ["<{0}>: '{1}'".format(email, accounts.accounts[email]) for email in emails]
+       ["<alice@some.domain>: ''", "<bob@some.domain>: 'Bob'", "<eve@some.domain>: 'Eve'"]
 
    Accounts can be dumped for later reconstruction.
 
-   >>> a.dump()
-   >>> a = omr.Accounts()
-   >>> list(a.accounts.keys())
-   []
-   >>> a.load()
-   >>> emails = list(a.accounts.keys())
-   >>> emails.sort()
-   >>> ["<{0}>: '{1}'".format(email, a.accounts[email]) for email in emails]
-   ["<alice@some.domain>: ''", "<bob@some.domain>: 'Bob'", "<eve@some.domain>: 'Eve'"]
+       >>> accounts.dump()
+       >>> accounts = omr.Accounts()
+       >>> list(accounts.accounts.keys())
+       []
+       >>> accounts.load()
+       >>> emails = list(accounts.accounts.keys())
+       >>> emails.sort()
+       >>> ["<{0}>: '{1}'".format(email, accounts.accounts[email]) for email in emails]
+       ["<alice@some.domain>: ''", "<bob@some.domain>: 'Bob'", "<eve@some.domain>: 'Eve'"]
 
 
    ## Items
@@ -62,146 +62,146 @@
    Items may posess additional attributes, as defined in the Dublin
    Core Metadata standard.
 
-   >>> import hashlib
-   >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 1 --></svg>", encoding="utf8"))
-   >>> test_item_1 = {"identifier" : hash.hexdigest()}
-   >>> test_item_1["creator"] = emails[0]
-   >>> test_item_1["title"] = "Test 1 SVG image"
+       >>> import hashlib
+       >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 1 --></svg>", encoding="utf8"))
+       >>> test_item_1 = {"identifier" : hash.hexdigest()}
+       >>> test_item_1["creator"] = emails[0]
+       >>> test_item_1["title"] = "Test 1 SVG image"
 
-   >>> class TestItem:
-   ...     pass
-   >>> test_item_2 = TestItem()
-   >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 2 --></svg>", encoding="utf8"))
-   >>> test_item_2.identifier = hash.hexdigest()
-   >>> test_item_2.creator = emails[1]
-   >>> test_item_2.format = "image/svg"
+       >>> class TestItem:
+       ...     pass
+       >>> test_item_2 = TestItem()
+       >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 2 --></svg>", encoding="utf8"))
+       >>> test_item_2.identifier = hash.hexdigest()
+       >>> test_item_2.creator = emails[1]
+       >>> test_item_2.format = "image/svg"
 
    For convenience, there is an item class.
 
-   >>> import io
-   >>> test_item_3 = omr.Item(io.BytesIO(bytes("<svg><!-- Test 3 --></svg>", encoding="utf8")), creator=emails[2], description="Test 3 SVG image.")
+       >>> import io
+       >>> test_item_3 = omr.Item(io.BytesIO(bytes("<svg><!-- Test 3 --></svg>", encoding="utf8")), creator=emails[2], description="Test 3 SVG image.")
 
    Access to mandatory properties of an Item which are not defined
    will return an empty string.
 
-   >>> test_item_3.date
-   ''
+       >>> test_item_3.date
+       ''
 
    Arbitrary attributes will not.
 
-   >>> test_item_3.arbitrary
-   Traceback (most recent call last):
-   ...
-   AttributeError: 'Item' object has no attribute 'arbitrary'
+       >>> test_item_3.arbitrary
+       Traceback (most recent call last):
+       ...
+       AttributeError: 'Item' object has no attribute 'arbitrary'
 
 
    ## Repository API
 
-   >>> r.add(test_item_1)
-   >>> r.add(test_item_2)
-   >>> r.add(test_item_3)
+       >>> repository.add(test_item_1)
+       >>> repository.add(test_item_2)
+       >>> repository.add(test_item_3)
 
    Invalid items will be rejected.
 
-   >>> r.add({"not" : "valid"})
-   Traceback (most recent call last):
-   ...
-   RuntimeError: Can not add invalid item to repository: '{'not': 'valid'}'
+       >>> repository.add({"not" : "valid"})
+       Traceback (most recent call last):
+       ...
+       RuntimeError: Can not add invalid item to repository: '{'not': 'valid'}'
 
    Repository.items allows for listing and enumerating items.
 
-   >>> identifiers = list(r.items.keys())
-   >>> identifiers.sort()
+       >>> identifiers = list(repository.items.keys())
+       >>> identifiers.sort()
 
    Let's display the identifiers shortened, for reading convenience.
 
-   >>> [identifier[:8] for identifier in identifiers]
-   ['6f847d12', '9d71ca42', 'aac73176']
+       >>> [identifier[:8] for identifier in identifiers]
+       ['6f847d12', '9d71ca42', 'aac73176']
 
    The repository can be dumped for later reconstruction.
 
-   >>> def print_items(identifiers):
-   ...     attributes = list(omr.DUBLIN_CORE_PROPERTIES.keys())
-   ...     attributes.sort()
-   ...     for identifier in identifiers:
-   ...         print(identifier[:8])
-   ...         for attribute in attributes:
-   ...             value = None
-   ...             try:
-   ...                 value = r.items[identifier][attribute]
-   ...             except KeyError:
-   ...                 # It's a dict, but the key is missing
-   ...                 value = ""
-   ...             except:
-   ...                 try:
-   ...                     value = r.items[identifier].__getattr__(attribute)
-   ...                 except:
-   ...                     try:
-   ...                         value = r.items[identifier].__dict__[attribute]
-   ...                     except:
-   ...                         # Giving up
-   ...                         value = ""
-   ...             if value != "":
-   ...                 value = " " + value[:32]
-   ...             print("    {0}:{1}".format(attribute, value))
-   ...     return
-   >>> print_items(identifiers)
-   6f847d12
-       creator: bob@some.domain
-       date:
-       description:
-       format: image/svg
-       identifier: 6f847d125a850a71cb1aed36ee680be6
-       rights:
-       title:
-   9d71ca42
-       creator: alice@some.domain
-       date:
-       description:
-       format:
-       identifier: 9d71ca42166e88aa759331b6b82de5b1
-       rights:
-       title: Test 1 SVG image
-   aac73176
-       creator: eve@some.domain
-       date:
-       description: Test 3 SVG image.
-       format:
-       identifier: aac73176dd0aa26ecfad7e7263c60572
-       rights:
-       title:
-   >>> r.dump()
-   >>> r = omr.Repository()
-   >>> r.items
-   {}
-   >>> r.load()
-   >>> identifiers = list(r.items.keys())
-   >>> identifiers.sort()
-   >>> print_items(identifiers)
-   6f847d12
-       creator: bob@some.domain
-       date:
-       description:
-       format: image/svg
-       identifier: 6f847d125a850a71cb1aed36ee680be6
-       rights:
-       title:
-   9d71ca42
-       creator: alice@some.domain
-       date:
-       description:
-       format:
-       identifier: 9d71ca42166e88aa759331b6b82de5b1
-       rights:
-       title: Test 1 SVG image
-   aac73176
-       creator: eve@some.domain
-       date:
-       description: Test 3 SVG image.
-       format:
-       identifier: aac73176dd0aa26ecfad7e7263c60572
-       rights:
-       title:
+       >>> def print_items(identifiers):
+       ...     attributes = list(omr.DUBLIN_CORE_PROPERTIES.keys())
+       ...     attributes.sort()
+       ...     for identifier in identifiers:
+       ...         print(identifier[:8])
+       ...         for attribute in attributes:
+       ...             value = None
+       ...             try:
+       ...                 value = repository.items[identifier][attribute]
+       ...             except KeyError:
+       ...                 # It's a dict, but the key is missing
+       ...                 value = ""
+       ...             except:
+       ...                 try:
+       ...                     value = repository.items[identifier].__getattr__(attribute)
+       ...                 except:
+       ...                     try:
+       ...                         value = repository.items[identifier].__dict__[attribute]
+       ...                     except:
+       ...                         # Giving up
+       ...                         value = ""
+       ...             if value != "":
+       ...                 value = " " + value[:32]
+       ...             print("    {0}:{1}".format(attribute, value))
+       ...     return
+       >>> print_items(identifiers)
+       6f847d12
+           creator: bob@some.domain
+           date:
+           description:
+           format: image/svg
+           identifier: 6f847d125a850a71cb1aed36ee680be6
+           rights:
+           title:
+       9d71ca42
+           creator: alice@some.domain
+           date:
+           description:
+           format:
+           identifier: 9d71ca42166e88aa759331b6b82de5b1
+           rights:
+           title: Test 1 SVG image
+       aac73176
+           creator: eve@some.domain
+           date:
+           description: Test 3 SVG image.
+           format:
+           identifier: aac73176dd0aa26ecfad7e7263c60572
+           rights:
+           title:
+       >>> repository.dump()
+       >>> repository = omr.Repository()
+       >>> repository.items
+       {}
+       >>> repository.load()
+       >>> identifiers = list(repository.items.keys())
+       >>> identifiers.sort()
+       >>> print_items(identifiers)
+       6f847d12
+           creator: bob@some.domain
+           date:
+           description:
+           format: image/svg
+           identifier: 6f847d125a850a71cb1aed36ee680be6
+           rights:
+           title:
+       9d71ca42
+           creator: alice@some.domain
+           date:
+           description:
+           format:
+           identifier: 9d71ca42166e88aa759331b6b82de5b1
+           rights:
+           title: Test 1 SVG image
+       aac73176
+           creator: eve@some.domain
+           date:
+           description: Test 3 SVG image.
+           format:
+           identifier: aac73176dd0aa26ecfad7e7263c60572
+           rights:
+           title:
 """
 
 # This file is part of OpenMediaRepository.
