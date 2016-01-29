@@ -202,6 +202,22 @@
            identifier: aac73176dd0aa26ecfad7e7263c60572
            rights:
            title:
+
+
+   ## HTTP API
+
+   The CherryPy framework handles the HTTP API by means of translating
+   URIs to instance methods of the WebApp class.
+
+       >>> webapp = WebApp()
+
+   ### Get a form to add an item
+
+   /item/add
+
+       >>> html_response = webapp.items.add()
+       >>> html_response.startswith("<!DOCTYPE") or html_response.startswith("<html")
+       True
 """
 
 # This file is part of OpenMediaRepository.
@@ -225,6 +241,7 @@ import logging
 import hashlib
 import json
 import cherrypy
+import simple.html
 
 VERSION = "0.1.0"
 
@@ -237,7 +254,7 @@ LOGGER.addHandler(STDERR_HANDLER)
 
 PORT = 8006
 THREADS = 10
-AUTORELOAD = False
+AUTORELOAD = True
 
 # http://www.dublincore.org/documents/dcmi-terms/#H3
 #
@@ -481,6 +498,23 @@ class Accounts:
 
         return
 
+class ItemsWebApp:
+    """HTTP-REST-Interface to the Repository class, to be mounted in the CherryPy root.
+    """
+
+    # It is not feasible to expose Repository directly.
+    # OOP uses verbs, while REST is supposed to use nouns.
+
+    def add(self):
+
+        page = simple.html.Page("Add Item")
+
+        page.append("<p>ItemsWebApp.add() standing by</p>")
+
+        return str(page)
+
+    add.exposed = True
+    
 class WebApp:
     """Web application main class, suitable as cherrypy root.
     """
@@ -502,6 +536,10 @@ class WebApp:
 
             pass
 
+        # Mount sub-handlers
+        #
+        self.items = ItemsWebApp()
+
         # Make self.__call__ visible to cherrypy
         #
         self.exposed = True
@@ -510,7 +548,7 @@ class WebApp:
 
     def __call__(self):
         """Called by cherrypy for the / root page.
-           Returns 'index.html' from CWD.
+           Returns 'index.html' from CWD, or an error message.
         """
 
         return self.index
