@@ -64,32 +64,32 @@
 
        >>> import hashlib
        >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 1 --></svg>", encoding="utf8"))
-       >>> test_item_1 = {"identifier" : hash.hexdigest()}
-       >>> test_item_1["creator"] = emails[0]
-       >>> test_item_1["title"] = "Test 1 SVG image"
+       >>> test_item_dict = {"identifier" : hash.hexdigest()}
+       >>> test_item_dict["creator"] = emails[0]
+       >>> test_item_dict["title"] = "Test 1 SVG image"
 
        >>> class TestItem:
        ...     pass
-       >>> test_item_2 = TestItem()
+       >>> test_item_custom_class = TestItem()
        >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 2 --></svg>", encoding="utf8"))
-       >>> test_item_2.identifier = hash.hexdigest()
-       >>> test_item_2.creator = emails[1]
-       >>> test_item_2.format = "image/svg"
+       >>> test_item_custom_class.identifier = hash.hexdigest()
+       >>> test_item_custom_class.creator = emails[1]
+       >>> test_item_custom_class.format = "image/svg"
 
    For convenience, there is an item class.
 
        >>> import io
-       >>> test_item_3 = omr.Item(io.BytesIO(bytes("<svg><!-- Test 3 --></svg>", encoding="utf8")), creator=emails[2], description="Test 3 SVG image.")
+       >>> test_item_supplied_class = omr.Item(io.BytesIO(bytes("<svg><!-- Test 3 --></svg>", encoding="utf8")), creator=emails[2], description="Test 3 SVG image.")
 
    Access to mandatory properties of an Item which are not defined
    will return an empty string.
 
-       >>> test_item_3.date
+       >>> test_item_supplied_class.date
        ''
 
    Arbitrary attributes will not.
 
-       >>> test_item_3.arbitrary
+       >>> test_item_supplied_class.arbitrary
        Traceback (most recent call last):
        ...
        AttributeError: 'Item' object has no attribute 'arbitrary'
@@ -97,9 +97,9 @@
 
    ## Repository API
 
-       >>> repository.add(test_item_1)
-       >>> repository.add(test_item_2)
-       >>> repository.add(test_item_3)
+       >>> repository.add(test_item_dict)
+       >>> repository.add(test_item_custom_class)
+       >>> repository.add(test_item_supplied_class)
 
    Invalid items will be rejected.
 
@@ -213,11 +213,26 @@
 
    ### Get a form to add an item
 
-   URI: /item/add
+   URI: /items/add
    Method: GET
 
        >>> html_response = webapp.items.add()
        >>> html_response.startswith("<!DOCTYPE") or html_response.startswith("<html")
+       True
+
+   ### Add an item
+
+   URI: /items
+   Method: POST
+
+       >>> html_response = webapp.items(**test_item_dict)
+       >>> html_response.index("Item added") > -1
+       True
+
+   Duplicate additions are not allowed via the HTTP API.
+
+       >>> html_response = webapp.items(**test_item_dict)
+       >>> html_response.index("identifier already exists") > -1
        True
 """
 
@@ -503,10 +518,76 @@ class Accounts:
 
 class ItemsWebApp:
     """HTTP-REST-Interface to the Repository class, to be mounted in the CherryPy root.
+
+       Attributes:
+
+       ItemsWebApp.repository
+           Repository instance.
     """
 
     # It is not feasible to expose Repository directly.
     # OOP uses verbs, while REST is supposed to use nouns.
+
+    def __init__(self, repository):
+        """Initialise ItemsWebApp with a dependency-injected Repository.
+        """
+
+        self.repository = repository
+
+        return
+
+    def __call__(self, **kwargs):
+        """List items, or add a given item.
+           Called by cherrypy.
+        """
+
+        page = simple.html.Page("Items")
+
+        # NOTE: Multiple exit points ahead.
+
+        if len(kwargs):
+
+            if (not "identifier" in kwargs.keys()
+                or not len(kwargs["identifier"])
+                or not kwargs["identifier"].isalnum()):
+
+                # TODO: Return error code
+                #
+                page.append("<p>Error: invalid identifier</p>")
+
+                return str(page)
+
+            if kwargs["identifier"] in self.repository.items.keys():
+
+                # TODO: Return error code
+                #
+                page.append("<p>Error: identifier already exists</p>")
+
+                return str(page)
+
+            item_dict = {"identifier": kwargs["identifier"]}
+
+            for key in kwargs.keys():
+
+                if key != "identifier" and key in DUBLIN_CORE_PROPERTIES.keys():
+
+                    item_dict[key] = kwargs[key]
+
+            self.repository.add(item_dict)
+
+            page.append("<h1>Item added</h1>")
+
+            page.append('<p><a href="/items/{0}">View item</a></p>'.format(kwargs["identifier"]))
+
+            return str(page)
+
+        # No kwargs
+        
+        # TODO: render list
+        #
+        page.append("<p>GET items is not implemented.</p>")
+
+        return str(page)
 
     def add(self):
 
@@ -539,6 +620,10 @@ class ItemsWebApp:
 
                 value = "CC-BY"
 
+            if key == "format":
+
+                value = "text/plain"
+
             form.add_input(label = key.capitalize(),
                            type = "text",
                            name = key,
@@ -552,11 +637,24 @@ class ItemsWebApp:
     
 class WebApp:
     """Web application main class, suitable as cherrypy root.
+
+       Attributes:
+
+       WebApp.repository
+           Repository instance.
+
+       WebApp.index
+           String containing the index HTML page.
+
+       WebApp.items
+           ItemsWebApp instance.
     """
 
     def __init__(self):
         """Initialise WebApp.
         """
+
+        self.repository = Repository()
 
         self.index = "index.html not found in current working directory."
 
@@ -573,7 +671,8 @@ class WebApp:
 
         # Mount sub-handlers
         #
-        self.items = ItemsWebApp()
+        self.items = ItemsWebApp(self.repository)
+        self.items.exposed = True
 
         # Make self.__call__ visible to cherrypy
         #
