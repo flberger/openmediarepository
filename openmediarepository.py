@@ -213,7 +213,8 @@
 
    ### Get a form to add an item
 
-   /item/add
+   URI: /item/add
+   Method: GET
 
        >>> html_response = webapp.items.add()
        >>> html_response.startswith("<!DOCTYPE") or html_response.startswith("<html")
@@ -241,6 +242,8 @@ import logging
 import hashlib
 import json
 import cherrypy
+import datetime
+#
 import simple.html
 
 VERSION = "0.1.0"
@@ -509,7 +512,39 @@ class ItemsWebApp:
 
         page = simple.html.Page("Add Item")
 
-        page.append("<p>ItemsWebApp.add() standing by</p>")
+        page.append("<h1>Add item</h1>")
+
+        page.append("<dl>")
+        
+        for key in DUBLIN_CORE_PROPERTIES.keys():
+
+            page.append("<dt>{0}</dt><dd>{1}</dd>".format(key.capitalize(), DUBLIN_CORE_PROPERTIES[key]))
+
+        page.append("</dl>")
+
+        form = simple.html.Form(action="/items",
+                                method="POST")
+
+        form.add_fieldset("Item")
+
+        for key in DUBLIN_CORE_PROPERTIES.keys():
+
+            value = ""
+            
+            if key == "date":
+
+                value = datetime.date.today().isoformat()
+
+            if key == "rights":
+
+                value = "CC-BY"
+
+            form.add_input(label = key.capitalize(),
+                           type = "text",
+                           name = key,
+                           value = value)
+
+        page.append(str(form))
 
         return str(page)
 
