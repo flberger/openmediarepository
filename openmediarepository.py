@@ -593,6 +593,8 @@ class ItemsWebApp:
 
                 return str(page)
 
+            page.append('<ul><li><a href="/">Home</a></li><li><a href="/items">Items</a></li></ul>')
+        
             # TODO: Item rendering should be done by a special method
             #
             page.append("<h1>{0}</h1>".format(self.repository.items[args[0]].title))
@@ -655,11 +657,15 @@ class ItemsWebApp:
 
         # No kwargs either.
 
+        page.append('<ul><li><a href="/">Home</a></li></ul>')
+        
+        page.append("<h1>Items</h1>")
+
         page.append("<ul>")
         
         for identifier in self.repository.items.keys():
 
-            page.append("<li>{0}".format(self.repository.items[identifier].title))
+            page.append('<li><a href="/items/{0}">{1}</a>'.format(identifier, self.repository.items[identifier].title))
 
             page.append("<ul>")
             
@@ -674,13 +680,15 @@ class ItemsWebApp:
             page.append("</li>")
 
         page.append("</ul>")
-        
+
         return str(page)
 
     def add(self):
 
         page = simple.html.Page("Add Item", css=self.css)
 
+        page.append('<ul><li><a href="/">Home</a></li></ul>')
+        
         page.append("<h1>Add item</h1>")
 
         page.append("<dl>")
