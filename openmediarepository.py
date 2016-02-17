@@ -572,9 +572,6 @@ class ItemsWebApp:
            HTTP POST calls will submit kwargs.
         """
 
-        #REMOVE
-        print("*** __call__(self, {}, {})".format(args, kwargs))
-
         # NOTE: Multiple exit points ahead.
         
         page = simple.html.Page("Item")
@@ -638,6 +635,10 @@ class ItemsWebApp:
                     item_dict[key] = kwargs[key]
 
             self.repository.add(item_dict)
+
+            # Be persistent
+            #
+            self.repository.dump()
 
             page.append("<h1>Item added</h1>")
 
@@ -735,6 +736,15 @@ class WebApp:
         """
 
         self.repository = Repository()
+
+        try:
+            self.repository.load()
+            
+        except FileNotFoundError:
+            
+            # File will be created on first edit
+            #
+            pass
 
         self.index = "index.html not found in current working directory."
 
