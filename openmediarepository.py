@@ -53,8 +53,7 @@
    ## Items
 
    Media repository items are key-value storages with a mandatory set
-   of keys. They can either be represented by a dict or by an object
-   who responds accordingly to attribute queries.
+   of keys.
 
    The identifier of an item is the hex digest of the Whirlpool hash
    of its content.
@@ -62,21 +61,7 @@
    Items may posess additional attributes, as defined in the Dublin
    Core Metadata standard.
 
-       >>> import hashlib
-       >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 1 --></svg>", encoding="utf8"))
-       >>> test_item_dict = {"identifier" : hash.hexdigest()}
-       >>> test_item_dict["creator"] = emails[0]
-       >>> test_item_dict["title"] = "Test 1 SVG image"
-
-       >>> class TestItem:
-       ...     pass
-       >>> test_item_custom_class = TestItem()
-       >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 2 --></svg>", encoding="utf8"))
-       >>> test_item_custom_class.identifier = hash.hexdigest()
-       >>> test_item_custom_class.creator = emails[1]
-       >>> test_item_custom_class.format = "image/svg"
-
-   For convenience, there is an item class.
+   For convenience, there is an Item class.
 
        >>> import io
        >>> test_item_supplied_class = omr.Item(io.BytesIO(bytes("<svg><!-- Test 3 --></svg>", encoding="utf8")), creator=emails[2], description="Test 3 SVG image.")
@@ -97,6 +82,23 @@
 
    ## Repository API
 
+   Items can be added either as an Item instance, as a dict, or as an
+   object which responds accordingly to attribute queries.
+
+       >>> import hashlib
+       >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 1 --></svg>", encoding="utf8"))
+       >>> test_item_dict = {"identifier" : hash.hexdigest()}
+       >>> test_item_dict["creator"] = emails[0]
+       >>> test_item_dict["title"] = "Test 1 SVG image"
+
+       >>> class TestItem:
+       ...     pass
+       >>> test_item_custom_class = TestItem()
+       >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 2 --></svg>", encoding="utf8"))
+       >>> test_item_custom_class.identifier = hash.hexdigest()
+       >>> test_item_custom_class.creator = emails[1]
+       >>> test_item_custom_class.format = "image/svg"
+
        >>> repository.add(test_item_dict)
        >>> repository.add(test_item_custom_class)
        >>> repository.add(test_item_supplied_class)
@@ -108,18 +110,22 @@
        ...
        RuntimeError: Can not add invalid item to repository: '{'not': 'valid'}'
 
-   Repository.items allows for listing and enumerating items.
+   The Repository.items dict allows for listing and enumerating items.
+
+   After adding, all items in the Repository will adhere to the
+   interface of the Item class, i.e. you can access their attributes
+   the Python way.
+
+       >>> l = [item.identifier[:8] for item in repository.items.values()]
+       >>> l.sort()
+       >>> l
+       ['6f847d12', '9d71ca42', 'aac73176']
+
+
+  The repository can be dumped for later reconstruction.
 
        >>> identifiers = list(repository.items.keys())
        >>> identifiers.sort()
-
-   Let's display the identifiers shortened, for reading convenience.
-
-       >>> [identifier[:8] for identifier in identifiers]
-       ['6f847d12', '9d71ca42', 'aac73176']
-
-   The repository can be dumped for later reconstruction.
-
        >>> def print_items(identifiers):
        ...     attributes = list(omr.DUBLIN_CORE_PROPERTIES.keys())
        ...     attributes.sort()
@@ -128,19 +134,9 @@
        ...         for attribute in attributes:
        ...             value = None
        ...             try:
-       ...                 value = repository.items[identifier][attribute]
-       ...             except KeyError:
-       ...                 # It's a dict, but the key is missing
-       ...                 value = ""
+       ...                 value = repository.items[identifier].__dict__[attribute]
        ...             except:
-       ...                 try:
-       ...                     value = repository.items[identifier].__getattr__(attribute)
-       ...                 except:
-       ...                     try:
-       ...                         value = repository.items[identifier].__dict__[attribute]
-       ...                     except:
-       ...                         # Giving up
-       ...                         value = ""
+       ...                 value = ""
        ...             if value != "":
        ...                 value = " " + value[:32]
        ...             print("    {0}:{1}".format(attribute, value))
@@ -153,6 +149,7 @@
            format: image/svg
            identifier: 6f847d125a850a71cb1aed36ee680be6
            rights:
+           source:
            title:
        9d71ca42
            creator: alice@some.domain
@@ -161,6 +158,7 @@
            format:
            identifier: 9d71ca42166e88aa759331b6b82de5b1
            rights:
+           source:
            title: Test 1 SVG image
        aac73176
            creator: eve@some.domain
@@ -169,6 +167,7 @@
            format:
            identifier: aac73176dd0aa26ecfad7e7263c60572
            rights:
+           source:
            title:
        >>> repository.dump()
        >>> repository = omr.Repository()
@@ -185,6 +184,7 @@
            format: image/svg
            identifier: 6f847d125a850a71cb1aed36ee680be6
            rights:
+           source:
            title:
        9d71ca42
            creator: alice@some.domain
@@ -193,6 +193,7 @@
            format:
            identifier: 9d71ca42166e88aa759331b6b82de5b1
            rights:
+           source:
            title: Test 1 SVG image
        aac73176
            creator: eve@some.domain
@@ -201,6 +202,7 @@
            format:
            identifier: aac73176dd0aa26ecfad7e7263c60572
            rights:
+           source:
            title:
 
 
@@ -233,6 +235,24 @@
 
        >>> html_response = webapp.items(**test_item_dict)
        >>> html_response.index("identifier already exists") > -1
+       True
+
+   ### Display multiple items
+
+   URI: /items
+   Method: GET
+
+       >>> html_response = webapp.items()
+       >>> html_response.index("<ul>") > -1
+       True
+
+   ### Display a single item
+
+   URI: /items/(identifier)
+   Method: GET
+
+       >>> html_response = webapp.items.__getattr__(test_item_dict["identifier"])
+       >>> html_response.index("<ul>") > -1
        True
 """
 
@@ -283,6 +303,7 @@ DUBLIN_CORE_PROPERTIES = {
     "format": "The file format, physical medium, or dimensions of the resource.",
     "identifier": "An unambiguous reference to the resource within a given context.",
     "rights": "Information about rights held in and over the resource.",
+    "source": "A related resource from which the described resource is derived.",
     "title": "A name given to the resource."}
 
 class Item:
@@ -313,7 +334,7 @@ class Item:
            A name given to the resource.
     """
 
-    def __init__(self, fp, **kwargs):
+    def __init__(self, fp = None, **kwargs):
         """Initialise.
            fp is a binary mode filepointer pointing to the media file
            to be represented.
@@ -321,7 +342,19 @@ class Item:
            present as keys in DUBLIN_CORE_PROPERTIES.keys().
         """
 
-        self.identifier = hashlib.new("whirlpool", fp.read()).hexdigest()
+        self.identifier = None
+
+        if fp is not None:
+            
+            self.identifier = hashlib.new("whirlpool", fp.read()).hexdigest()
+
+        elif "identifier" in kwargs.keys() and kwargs["identifier"]:
+
+            self.identifier = kwargs["identifier"]
+
+        else:
+
+            raise RuntimeError("Can not determine valid identifier from '{0}' and {1}".format(fp, kwargs))
 
         for key in kwargs.keys():
 
@@ -364,23 +397,29 @@ class Repository:
         return
 
     def add(self, item):
-        """Add an item to the repository.
+        """Add an item to the repository as an Item instance.
            item is either a dictionary or returns fitting values
-           on __getattr__() calls.
+           on __getattr__() calls. An Item instance does the latter.
         """
 
+        # First shot: we believe it to already be an Item instance,
+        # or compatible.
+        #
         try:
-            self.items[item["identifier"]] = item
+            self.items[item.identifier] = item
 
-        except:
+        except AttributeError:
 
-            # May be TypeError, KeyError, ...
+            # Apparently not. Let's try with a dict.
 
             try:
-                self.items[item.identifier] = item
 
-            except AttributeError:
+                self.items[item["identifier"]] = Item(**item)
+            
+            except:
 
+                # Giving up
+                #
                 raise RuntimeError("Can not add invalid item to repository: '{0}'".format(repr(item)))
 
         return
@@ -400,30 +439,14 @@ class Repository:
 
             for attribute in DUBLIN_CORE_PROPERTIES.keys():
 
-                value = None
-
                 try:
-                    value = self.items[identifier][attribute]
+                    dict_to_serialise[identifier][attribute] = self.items[identifier].__dict__[attribute]
 
                 except KeyError:
-                    # It's a dict, but the key is missing
-                    value = ""
 
-                except:
+                    # Not adding missing attribute
 
-                    try:
-                        value = self.items[identifier].__getattr__(attribute)
-
-                    except:
-
-                        try:
-                            value = self.items[identifier].__dict__[attribute]
-
-                        except:
-                            # Giving up
-                            value = ""
-
-                dict_to_serialise[identifier][attribute] = value
+                    pass
 
         with open("repository.json", "wt", encoding="utf8") as fp:
 
@@ -436,9 +459,15 @@ class Repository:
            The default implementation reads the data from a JSON file in CWD.
         """
 
+        items_as_dict = {}
+
         with open("repository.json", "rt", encoding="utf8") as fp:
 
-            self.items = json.loads(fp.read())
+            items_as_dict = json.loads(fp.read())
+
+        for identifier in items_as_dict.keys():
+
+            self.items[identifier] = Item(**items_as_dict[identifier])
 
         return
 
@@ -536,14 +565,49 @@ class ItemsWebApp:
 
         return
 
-    def __call__(self, **kwargs):
+    def __call__(self, *args, **kwargs):
         """List items, or add a given item.
            Called by cherrypy.
+           HTTP GET calls will submit args.
+           HTTP POST calls will submit kwargs.
         """
 
-        page = simple.html.Page("Items")
+        #REMOVE
+        print("*** __call__(self, {}, {})".format(args, kwargs))
 
         # NOTE: Multiple exit points ahead.
+        
+        page = simple.html.Page("Item")
+        
+        if args:
+
+            if args[0] not in self.repository.items.keys():
+
+                # TODO: Return error code
+                #
+                page.append("<p>Error: item does not exist</p>")
+
+                return str(page)
+
+            # TODO: Item rendering should be done by a special method
+            #
+            page.append("<h1>{0}</h1>".format(self.repository.items[args[0]].title))
+
+            page.append("<ul>")
+
+            for dc_key in DUBLIN_CORE_PROPERTIES.keys():
+
+                if dc_key != "title":
+
+                    page.append("<li>{0}: {1}</li>".format(dc_key.capitalize(), self.repository.items[args[0]].__getattr__(dc_key)))
+
+            page.append("</ul>")
+
+            return str(page)
+
+        # No args.
+
+        page = simple.html.Page("Items")
 
         if len(kwargs):
 
@@ -581,12 +645,28 @@ class ItemsWebApp:
 
             return str(page)
 
-        # No kwargs
-        
-        # TODO: render list
-        #
-        page.append("<p>GET items is not implemented.</p>")
+        # No kwargs either.
 
+        page.append("<ul>")
+        
+        for identifier in self.repository.items.keys():
+
+            page.append("<li>{0}".format(self.repository.items[identifier].title))
+
+            page.append("<ul>")
+            
+            for dc_key in DUBLIN_CORE_PROPERTIES.keys():
+
+                if dc_key != "title":
+
+                    page.append("<li>{0}: {1}</li>".format(dc_key.capitalize(), self.repository.items[identifier].__getattr__(dc_key)))
+
+            page.append("</ul>")        
+
+            page.append("</li>")
+
+        page.append("</ul>")
+        
         return str(page)
 
     def add(self):
@@ -634,7 +714,7 @@ class ItemsWebApp:
         return str(page)
 
     add.exposed = True
-    
+
 class WebApp:
     """Web application main class, suitable as cherrypy root.
 
