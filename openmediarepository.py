@@ -278,6 +278,7 @@ import hashlib
 import json
 import cherrypy
 import datetime
+import glob
 #
 import simple.html
 
@@ -552,14 +553,20 @@ class ItemsWebApp:
 
        ItemsWebApp.repository
            Repository instance.
+
+       ItemsWebApp.css
+           CSS code to be put in <style></style> section of HTML output.
     """
 
     # It is not feasible to expose Repository directly.
     # OOP uses verbs, while REST is supposed to use nouns.
 
-    def __init__(self, repository):
+    def __init__(self, repository, css = ""):
         """Initialise ItemsWebApp with a dependency-injected Repository.
+           css, if given, is CSS code to be put in <style></style> section of HTML output.
         """
+
+        self.css = css
 
         self.repository = repository
 
@@ -574,7 +581,7 @@ class ItemsWebApp:
 
         # NOTE: Multiple exit points ahead.
         
-        page = simple.html.Page("Item")
+        page = simple.html.Page("Item", css=self.css)
         
         if args:
 
@@ -604,7 +611,7 @@ class ItemsWebApp:
 
         # No args.
 
-        page = simple.html.Page("Items")
+        page = simple.html.Page("Items", css=self.css)
 
         if len(kwargs):
 
@@ -672,7 +679,7 @@ class ItemsWebApp:
 
     def add(self):
 
-        page = simple.html.Page("Add Item")
+        page = simple.html.Page("Add Item", css=self.css)
 
         page.append("<h1>Add item</h1>")
 
@@ -721,6 +728,9 @@ class WebApp:
 
        Attributes:
 
+       WebApp.css
+           CSS code to be put in <style></style> section of HTML output.
+
        WebApp.repository
            Repository instance.
 
@@ -731,9 +741,12 @@ class WebApp:
            ItemsWebApp instance.
     """
 
-    def __init__(self):
+    def __init__(self, css = ""):
         """Initialise WebApp.
+           css, if given, is CSS code to be put in <style></style> section of HTML output.
         """
+
+        self.css = css
 
         self.repository = Repository()
 
@@ -761,7 +774,7 @@ class WebApp:
 
         # Mount sub-handlers
         #
-        self.items = ItemsWebApp(self.repository)
+        self.items = ItemsWebApp(self.repository, self.css)
         self.items.exposed = True
 
         # Make self.__call__ visible to cherrypy
@@ -787,7 +800,17 @@ def main():
     """Main function, for IDE convenience.
     """
 
-    root = WebApp()
+    css = ""
+
+    css_files = glob.glob("*.css")
+
+    if css_files:
+
+        with open(css_files[0], "rt", encoding = "utf8") as fp:
+
+            css = fp.read()
+
+    root = WebApp(css)
 
     config_dict = {"/" : {"tools.sessions.on" : True,
                           "tools.sessions.timeout" : 60},
