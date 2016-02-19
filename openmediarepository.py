@@ -222,7 +222,7 @@
    The CherryPy framework handles the HTTP API by means of translating
    URIs to instance methods of the WebApp class.
 
-       >>> webapp = WebApp(config={"startpage": {"logo_img_uri": "", "footer": ""}})
+       >>> webapp = WebApp(config={"startpage": {"header": "", "footer": ""}})
 
    ### Get a form to add an item
 
@@ -596,6 +596,8 @@ class ItemsWebApp:
         
         page = simple.html.Page("Item", css=self.webapp.css)
         
+        page.append(self.webapp.config["startpage"]["header"])
+
         if args:
 
             if args[0] not in self.webapp.repository.items.keys():
@@ -631,6 +633,8 @@ class ItemsWebApp:
         # No args.
 
         page = simple.html.Page("Items", css=self.webapp.css)
+
+        page.append(self.webapp.config["startpage"]["header"])
 
         if len(kwargs):
 
@@ -711,6 +715,8 @@ class ItemsWebApp:
     def add(self):
 
         page = simple.html.Page("Add Item", css=self.webapp.css)
+
+        page.append(self.webapp.config["startpage"]["header"])
 
         page.append('<ul><li><a href="/">Home</a></li></ul>')
         
@@ -814,7 +820,7 @@ class WebApp:
 
         page = simple.html.Page("TODO: REASONABLE TITLE", css=self.css)
 
-        page.append('<p><img src="{0}" alt="[Logo]"></p>'.format(self.config["startpage"]["logo_img_uri"]))
+        page.append(self.config["startpage"]["header"])
 
         page.append("<ul>")
         page.append('<li><a href="/items">List items</a></li>')
