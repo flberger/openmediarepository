@@ -222,7 +222,7 @@
    The CherryPy framework handles the HTTP API by means of translating
    URIs to instance methods of the WebApp class.
 
-       >>> webapp = WebApp(config={})
+       >>> webapp = WebApp(config={"startpage": {"logo_img_uri": "", "footer": ""}})
 
    ### Get a form to add an item
 
@@ -604,6 +604,8 @@ class ItemsWebApp:
                 #
                 page.append("<p>Error: item does not exist</p>")
 
+                page.append(self.webapp.config["startpage"]["footer"])
+                
                 return str(page)
 
             page.append('<ul><li><a href="/">Home</a></li><li><a href="/items">Items</a></li></ul>')
@@ -622,6 +624,8 @@ class ItemsWebApp:
 
             page.append("</ul>")
 
+            page.append(self.webapp.config["startpage"]["footer"])
+            
             return str(page)
 
         # No args.
@@ -638,6 +642,8 @@ class ItemsWebApp:
                 #
                 page.append("<p>Error: invalid identifier</p>")
 
+                page.append(self.webapp.config["startpage"]["footer"])
+                
                 return str(page)
 
             if kwargs["identifier"] in self.webapp.repository.items.keys():
@@ -646,6 +652,8 @@ class ItemsWebApp:
                 #
                 page.append("<p>Error: identifier already exists</p>")
 
+                page.append(self.webapp.config["startpage"]["footer"])
+                
                 return str(page)
 
             item_dict = {"identifier": kwargs["identifier"]}
@@ -666,6 +674,8 @@ class ItemsWebApp:
 
             page.append('<p><a href="/items/{0}">View item</a></p>'.format(kwargs["identifier"]))
 
+            page.append(self.webapp.config["startpage"]["footer"])
+            
             return str(page)
 
         # No kwargs either.
@@ -694,6 +704,8 @@ class ItemsWebApp:
 
         page.append("</ul>")
 
+        page.append(self.webapp.config["startpage"]["footer"])
+        
         return str(page)
 
     def add(self):
@@ -740,6 +752,8 @@ class ItemsWebApp:
 
         page.append(str(form))
 
+        page.append(self.webapp.config["startpage"]["footer"])
+        
         return str(page)
 
     add.exposed = True
@@ -757,9 +771,6 @@ class WebApp:
 
        WebApp.repository
            Repository instance.
-
-       WebApp.index
-           String containing the index HTML page.
 
        WebApp.items
            ItemsWebApp instance.
@@ -786,19 +797,6 @@ class WebApp:
             #
             pass
 
-        self.index = "index.html not found in current working directory."
-
-        try:
-            with open("index.html", "rt", encoding="utf8") as fp:
-
-                self.index = fp.read()
-
-        except FileNotFoundError:
-
-            # Default already set
-
-            pass
-
         # Mount sub-handlers
         #
         self.items = ItemsWebApp(self)
@@ -812,10 +810,20 @@ class WebApp:
 
     def __call__(self):
         """Called by cherrypy for the / root page.
-           Returns 'index.html' from CWD, or an error message.
         """
 
-        return self.index
+        page = simple.html.Page("TODO: REASONABLE TITLE", css=self.css)
+
+        page.append('<p><img src="{0}" alt="[Logo]"></p>'.format(self.config["startpage"]["logo_img_uri"]))
+
+        page.append("<ul>")
+        page.append('<li><a href="/items">List items</a></li>')
+        page.append('<li><a href="/items/add">Add item</a></li>')
+        page.append("</ul>")
+
+        page.append(self.config["startpage"]["footer"])
+
+        return str(page)
 
     def subpage(self):
 
@@ -839,7 +847,7 @@ def main():
         # Config not found, creating
 
         config["startpage"] = {"logo_img_uri": "",
-                               }
+                               "footer": "<div></div>"}
         
         with open("openmediarepository.ini", "wt", encoding="utf8") as fp:
 
