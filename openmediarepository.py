@@ -3,6 +3,15 @@
    Copyright (c) 2015 Florian Berger <florian.berger@posteo.de>
 
 
+   ## Imports
+
+   First import some standard packages that we will need for the examples.
+
+       >>> import io
+       >>> import hashlib
+       >>> import os
+
+
    ## Basic Data Structures
 
    The basic data structures are the Repository and the Accounts.
@@ -63,7 +72,6 @@
 
    For convenience, there is an Item class.
 
-       >>> import io
        >>> test_item_supplied_class = omr.Item(io.BytesIO(bytes("<svg><!-- Test 3 --></svg>", encoding="utf8")), creator=emails[2], description="Test 3 SVG image.")
 
    Access to mandatory properties of an Item which are not defined
@@ -85,7 +93,6 @@
    Items can be added either as an Item instance, as a dict, or as an
    object which responds accordingly to attribute queries.
 
-       >>> import hashlib
        >>> hash = hashlib.new("whirlpool", bytes("<svg><!-- Test 1 --></svg>", encoding="utf8"))
        >>> test_item_dict = {"identifier" : hash.hexdigest()}
        >>> test_item_dict["creator"] = emails[0]
@@ -208,10 +215,14 @@
 
    ## HTTP API
 
+   Fist make sure to start from scratch for the examples.
+
+       >>> os.remove("repository.json")
+
    The CherryPy framework handles the HTTP API by means of translating
    URIs to instance methods of the WebApp class.
 
-       >>> webapp = WebApp()
+       >>> webapp = WebApp(config={})
 
    ### Get a form to add an item
 
@@ -251,9 +262,15 @@
    URI: /items/(identifier)
    Method: GET
 
-       >>> html_response = webapp.items.__getattr__(test_item_dict["identifier"])
+       >>> html_response = webapp.items(test_item_dict["identifier"])
        >>> html_response.index("<ul>") > -1
        True
+
+  ## Cleanup
+
+  Remove any temporary files created in the above.
+
+      >>> os.remove("repository.json")
 """
 
 # This file is part of OpenMediaRepository.
@@ -279,6 +296,7 @@ import json
 import cherrypy
 import datetime
 import glob
+import configparser
 #
 import simple.html
 
@@ -551,24 +569,19 @@ class ItemsWebApp:
 
        Attributes:
 
-       ItemsWebApp.repository
-           Repository instance.
-
-       ItemsWebApp.css
-           CSS code to be put in <style></style> section of HTML output.
+       ItemsWebApp.webapp
+           The WebApp instance that this ItemsWebApp instance is attached to.
     """
 
     # It is not feasible to expose Repository directly.
     # OOP uses verbs, while REST is supposed to use nouns.
 
-    def __init__(self, repository, css = ""):
-        """Initialise ItemsWebApp with a dependency-injected Repository.
-           css, if given, is CSS code to be put in <style></style> section of HTML output.
+    def __init__(self, webapp):
+        """Initialise ItemsWebApp.
+           webapp is the WebApp instance that this ItemsWebApp instance is attached to.
         """
 
-        self.css = css
-
-        self.repository = repository
+        self.webapp = webapp
 
         return
 
@@ -581,11 +594,11 @@ class ItemsWebApp:
 
         # NOTE: Multiple exit points ahead.
         
-        page = simple.html.Page("Item", css=self.css)
+        page = simple.html.Page("Item", css=self.webapp.css)
         
         if args:
 
-            if args[0] not in self.repository.items.keys():
+            if args[0] not in self.webapp.repository.items.keys():
 
                 # TODO: Return error code
                 #
@@ -597,7 +610,7 @@ class ItemsWebApp:
         
             # TODO: Item rendering should be done by a special method
             #
-            page.append("<h1>{0}</h1>".format(self.repository.items[args[0]].title))
+            page.append("<h1>{0}</h1>".format(self.webapp.repository.items[args[0]].title))
 
             page.append("<ul>")
 
@@ -605,7 +618,7 @@ class ItemsWebApp:
 
                 if dc_key != "title":
 
-                    page.append("<li>{0}: {1}</li>".format(dc_key.capitalize(), self.repository.items[args[0]].__getattr__(dc_key)))
+                    page.append("<li>{0}: {1}</li>".format(dc_key.capitalize(), self.webapp.repository.items[args[0]].__getattr__(dc_key)))
 
             page.append("</ul>")
 
@@ -613,7 +626,7 @@ class ItemsWebApp:
 
         # No args.
 
-        page = simple.html.Page("Items", css=self.css)
+        page = simple.html.Page("Items", css=self.webapp.css)
 
         if len(kwargs):
 
@@ -627,7 +640,7 @@ class ItemsWebApp:
 
                 return str(page)
 
-            if kwargs["identifier"] in self.repository.items.keys():
+            if kwargs["identifier"] in self.webapp.repository.items.keys():
 
                 # TODO: Return error code
                 #
@@ -643,11 +656,11 @@ class ItemsWebApp:
 
                     item_dict[key] = kwargs[key]
 
-            self.repository.add(item_dict)
+            self.webapp.repository.add(item_dict)
 
             # Be persistent
             #
-            self.repository.dump()
+            self.webapp.repository.dump()
 
             page.append("<h1>Item added</h1>")
 
@@ -663,9 +676,9 @@ class ItemsWebApp:
 
         page.append("<ul>")
         
-        for identifier in self.repository.items.keys():
+        for identifier in self.webapp.repository.items.keys():
 
-            page.append('<li><a href="/items/{0}">{1}</a>'.format(identifier, self.repository.items[identifier].title))
+            page.append('<li><a href="/items/{0}">{1}</a>'.format(identifier, self.webapp.repository.items[identifier].title))
 
             page.append("<ul>")
             
@@ -673,7 +686,7 @@ class ItemsWebApp:
 
                 if dc_key != "title":
 
-                    page.append("<li>{0}: {1}</li>".format(dc_key.capitalize(), self.repository.items[identifier].__getattr__(dc_key)))
+                    page.append("<li>{0}: {1}</li>".format(dc_key.capitalize(), self.webapp.repository.items[identifier].__getattr__(dc_key)))
 
             page.append("</ul>")        
 
@@ -685,7 +698,7 @@ class ItemsWebApp:
 
     def add(self):
 
-        page = simple.html.Page("Add Item", css=self.css)
+        page = simple.html.Page("Add Item", css=self.webapp.css)
 
         page.append('<ul><li><a href="/">Home</a></li></ul>')
         
@@ -736,6 +749,9 @@ class WebApp:
 
        Attributes:
 
+       WebApp.config
+           An instance of configparser.ConfigParser.
+    
        WebApp.css
            CSS code to be put in <style></style> section of HTML output.
 
@@ -749,10 +765,13 @@ class WebApp:
            ItemsWebApp instance.
     """
 
-    def __init__(self, css = ""):
+    def __init__(self, config, css = ""):
         """Initialise WebApp.
+           config is an instance of configparser.ConfigParser.
            css, if given, is CSS code to be put in <style></style> section of HTML output.
         """
+
+        self.config = config
 
         self.css = css
 
@@ -782,7 +801,7 @@ class WebApp:
 
         # Mount sub-handlers
         #
-        self.items = ItemsWebApp(self.repository, self.css)
+        self.items = ItemsWebApp(self)
         self.items.exposed = True
 
         # Make self.__call__ visible to cherrypy
@@ -808,6 +827,24 @@ def main():
     """Main function, for IDE convenience.
     """
 
+    config = configparser.ConfigParser()
+
+    try:
+        with open("openmediarepository.ini", "rt", encoding="utf8") as fp:
+            
+            config.read_file(fp)
+
+    except FileNotFoundError:
+
+        # Config not found, creating
+
+        config["startpage"] = {"logo_img_uri": "",
+                               }
+        
+        with open("openmediarepository.ini", "wt", encoding="utf8") as fp:
+
+            config.write(fp)
+
     css = ""
 
     css_files = glob.glob("*.css")
@@ -818,7 +855,7 @@ def main():
 
             css = fp.read()
 
-    root = WebApp(css)
+    root = WebApp(config, css)
 
     config_dict = {"/" : {"tools.sessions.on" : True,
                           "tools.sessions.timeout" : 60},
